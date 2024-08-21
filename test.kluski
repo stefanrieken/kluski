@@ -1,0 +1,10 @@
+# Current functions simply cut off number of arguments.
+# Also: if expression exceeds the number of required arg or return value registers, an error is produced.
+# (Stack is not yet used for anything.)
+? (* 2 3 4)
+
+# This is half of 42:
+? (* (+ 1 2) (+ 3 4))
+
+# And this is all of it:
+? (+ (* 3 4) (* 5 6))
