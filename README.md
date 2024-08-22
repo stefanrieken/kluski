@@ -18,20 +18,20 @@ a Polish notation calculation processor, a Polish dumpling seems appropriate.
 (This is a plain type; we can always upgrade the project to become Pierogi.)
 
 ## Status, and Build
-The only current backend generates x86-64 GNU assembly code, which can then be
-compiled further.
+There currently ar two backends: x86-64 Linux (gcc) and arm64 MacOS (clang). I
+expect e.g. the combination of arm64 and Linux to be slightly different again.
+At any rate, the Makefile selects a file called emit_<os>_<arch>.c, and if your
+port is missing, you can try adding it.
 
-Typing `make` should build the `kluski` executable, _and_ let it compile
-`test.kluski` into `test.s`, _and_ compile that into the `test` executable.
+Otherwise, typing `make` should build the `kluski` executable, _and_ let it
+compile `test.kluski` into `test.s`, _and_ compile that into the `test`
+executable.
 
-Next, you can test the return value of the `test` executable:
+Next, you can run the `test` executable, referring to the input file to know
+what it does:
 
-        ./test; echo $?
+        ./test
 
-If your system is not x86-64, compilation of `test.s` will likely fail; but you
-should at least be able to admire the generated assembly -- even though
-admittedly even the best x86 assembly code reads like poetry written in poo.
-(More backends to follow.)
-
-You may notice that we generate direct instructions ('+') and calls to both
-primitive assembly functions ('*') and primitive C functions ('?' = print).
+You may notice that we generate both direct instructions (in case of '+') as
+well as calls to both primitive assembly functions ('*') and primitive C
+functions ('?' = print).

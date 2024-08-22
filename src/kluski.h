@@ -23,8 +23,8 @@ typedef struct CtStack {
 
 extern char * regnames[];
 
-void emit_start();
-void emit_code(CtsEntry * entry, int pos);
-void emit_save_retval(int n);
-void emit_end();
+void emit_start(FILE * out);
+void emit_code(FILE * out, CtsEntry * entry, int pos, int num_args);
+void emit_save_retval(FILE * out, int n);
+void emit_end(FILE * out);
 

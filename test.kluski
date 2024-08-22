@@ -1,4 +1,8 @@
-# Current functions simply cut off number of arguments.
+# Variable number of args is supported for '+'
+? (+ 1 2 3 4)
+
+# Being a fixed function call (for demonstration purposes), the same thing doesn't work for '*';
+# the evaluation function just assumes two arguments.
 # Also: if expression exceeds the number of required arg or return value registers, an error is produced.
 # (Stack is not yet used for anything.)
 ? (* 2 3 4)
