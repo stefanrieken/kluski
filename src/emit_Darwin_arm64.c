@@ -25,13 +25,13 @@ void emit_code(FILE * out, CtsEntry * entry, int pos, int num_args) {
     switch(entry->command) {
         case CTS_FUNC:
             switch(entry->value) {
-                case '+':
+                case 0: // '+'; this may get more generalized still
                     // X0 already carries first arg, so that's convenient
                     for (int i=2; i<num_args; i++) {
                         fprintf (out, "    add x0, x0, %s /* add argument # %d */ \n", regnames[i], i);
                     }
                     break;
-                case '*':
+                case 1: // '*'; apart from the function call we presently make, this operator requires a different expression form from '+' etc. on x86 (but actually not here)
                     if (pos == 0) { // that's the function position; in any other position, function == common argument
                         fprintf (out, "    bl _times\n");
                     } else {
@@ -39,9 +39,9 @@ void emit_code(FILE * out, CtsEntry * entry, int pos, int num_args) {
                         fprintf (out, "    adr %s, _times\n", regnames[pos]); // That's for function pointers
                     }
                     break;
-                case '?':
+                default: // print, ...
                     if (pos == 0) { // that's the function position; in any other position, function == common argument
-                        fprintf (out, "    bl _printnum\n");//, regnames[0]);
+                        fprintf (out, "    bl _%s\n", primitive_names[entry->value]);//, regnames[0]);
                     } else {
                         // Apparently we're only pointing to the function
                         fprintf (out, "    adr %s, _printnum\n", regnames[pos]); // That's for function pointers

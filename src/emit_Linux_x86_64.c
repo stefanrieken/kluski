@@ -24,20 +24,20 @@ void emit_code(FILE * out, CtsEntry * entry, int pos, int num_args) {
     switch(entry->command) {
         case CTS_FUNC:
             switch(entry->value) {
-                case '+':
+                case 0: // '+'; this may get more generalized still
                     fprintf(out, "    mov %s, %%rax    /* move to return reg           */\n", regnames[1]);
                     for (int i=2; i<num_args; i++) {
                         fprintf(out, "    add %s, %%rax    /* direct add                   */\n", regnames[i]);
                     }
                     break;
-                case '*':
+                case 1: // '*'; apart from the function call we presently make, this operator requires a different expression form from '+' etc. on x86
                     fprintf(out, "    lea times(%%rip), %s\n", regnames[pos]); // That's for function pointers
                     if (pos == 0) { // that's the function position; in any other position, function == common argument
                         fprintf(out, "    call *%s\n", regnames[0]);
                     }
                     break;
-                case '?':
-                    fprintf(out, "    lea printnum(%%rip), %s\n", regnames[pos]); // That's for function pointers
+                default: // print, ...
+                    fprintf(out, "    lea %s(%%rip), %s\n", primitive_names[entry->value], regnames[pos]); // That's for function pointers
                     if (pos == 0) { // that's the function position; in any other position, function == common argument
                         fprintf(out, "    call *%s\n", regnames[0]);
                     }

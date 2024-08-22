@@ -6,6 +6,7 @@ typedef enum CtsCommand {
 } CtsCommand;
 
 extern char * cmdnames[];
+extern char * primitive_names[];
 
 typedef struct CtsEntry {
     enum CtsCommand command;

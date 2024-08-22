@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "kluski.h"
 
@@ -16,6 +17,14 @@
  * additionally supports strings, general variables and (inlined)
  * code blocks.
  */
+
+// This list of known primitives is a little bit overkill, but it
+// spares us from parsing duplicate strings.
+
+char * primitive_names[] = {
+    "+", "*", "printnum"
+};
+# define num_primitives (sizeof(primitive_names) / sizeof(char *))
 
 // Emit topmost expression as code
 void emit_expression(FILE * out, CtStack * cts, int nth_subexpr) {
@@ -55,7 +64,7 @@ void parse (CtStack * cts, FILE * in, FILE * out) {
 
     while (ch != EOF) {
         while (ch == '#') { do { ch = fgetc(in); } while (ch != '\n'); ch = fgetc(in); } // comments
-        if (ch == ' ') { ch = fgetc(in); continue; } // whitespace
+        if (ch == ' ' || ch == '\t') { ch = fgetc(in); continue; } // whitespace
         if(cts->values[cts->length-1].command == CTS_RETV) emit_save_retval(out, cts->values[cts->length-1].value);
         if (ch >= '0' && ch <= '9') { // number
            int numval = ch - '0';
@@ -65,28 +74,32 @@ void parse (CtStack * cts, FILE * in, FILE * out) {
                ch = fgetc(in);
            }
            cts_push(cts, CTS_ARGV, numval);
+        } else if (ch == '(') {
+            cts_push(cts, CTS_OPEN, 0);
+            ch = fgetc(in);
+        } else if (ch == ')' || ch == '\n' || ch == ';') {
+            if (ch == '\n' || ch == ';') n_subexprs = 0;
+            emit_expression(out, cts, n_subexprs++);
+            if (ch == '\n' || ch == ';') cts_push(cts, CTS_OPEN, 0); // start new implicit bracket
+            ch = fgetc(in);
         } else {
-            switch(ch) {
-                case '+':
-                case '*':
-                case '?':
-                    cts_push(cts, CTS_FUNC, ch);
-                    break;
-                case '(':
-                    cts_push(cts, CTS_OPEN, 0);
-                    break;
-                case '\n':
-//                    for (int i=0; i<cts->length;i++) printf("%s ", cmdnames[cts->values[i].command]);
-//                    printf("\n");
-                      n_subexprs = 0;
-                    // and fall through
-                case ')':
-                    emit_expression(out, cts, n_subexprs++);
-                    if (ch == '\n') cts_push(cts, CTS_OPEN, 0); // start new implicit bracket
-                    break;
-                default:
-                    printf("Unrecognized input.\n");
-                    break;
+            char buffer[256];
+            int length = 0;
+            do {
+                buffer[length++] = ch; ch = fgetc(in);
+            } while (ch != EOF && ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n' && ch != '(' && ch != ')' && ch != '{' && ch != '}' && ch != ';');
+            buffer[length++] = '\0';
+            //printf("Word of the day: *%s*\n", buffer);
+            int idx = -1;
+            for (int i=0; i<num_primitives;i++) {
+                if (strcmp(primitive_names[i], buffer) == 0) {
+                    idx = i; break;
+                }
+            }
+
+            if (idx == -1) printf("Unrecognized command: %s\n", buffer);
+            else {
+                cts_push(cts, CTS_FUNC, idx);
             }
             ch = fgetc(in);
         }
