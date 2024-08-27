@@ -76,7 +76,10 @@ int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, 
             fprintf(out, "    mov $%d, %s\n", entry->value.num, regnames[n_arg]);
             break;
         case PT_STR:
-            printf("    mov reg%d, label_X\n", n_arg); // TODO define further
+            int idx = 0;
+            StringEntry * e = unique_strings;
+            while(e != NULL) { if (e->str == entry->value.str) break;  e = e->next; idx++; }
+            fprintf(out, "    lea str%d(%%rip), %s\n", idx, regnames[n_arg]);
             break;
         case PT_FUN:
             switch(entry->value.num) {
@@ -115,7 +118,7 @@ int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, 
                 fprintf(out, "    jmp %df             /* jump over the block         */\n", 1); // TODO determine recursive block label by depth
                 fprintf(out, "0:                     /* start of block              */\n");
                 from = emit_code(out, stack, from+1, '}')-1;
-                fprintf(out, "ret                    /* return from block */\n");
+                fprintf(out, "    ret                /* return from block */\n");
                 fprintf(out, "%d:\n", 1); // TODO determine recursive block label by depth
                 return from;
             }

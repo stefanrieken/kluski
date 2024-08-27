@@ -25,6 +25,7 @@ typedef struct StringEntry {
     struct StringEntry * next;
     char * str;
 } StringEntry;
+extern StringEntry * unique_strings;
 
 extern char * primitive_names[];
 # define num_primitives (sizeof(primitive_names) / sizeof(char *))

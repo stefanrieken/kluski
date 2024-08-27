@@ -12,7 +12,7 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "printnum", "eval"
+    "+", "*", "printnum", "eval", "print"
 };
 # define num_primitives (sizeof(primitive_names) / sizeof(char *))
 
@@ -249,6 +249,17 @@ int emit_code(FILE * out, ParseStack * stack, int from, char until) {
     return from;
 }
 
+void emit_strings(FILE * out) {
+fprintf(out, ".section .rodata\n");
+    StringEntry * entry = unique_strings;
+    int i = 0;
+    while(entry != NULL) {
+        fprintf(out, "str%d:    .ascii \"%s\\0\"\n", i++, entry->str);
+        entry = entry->next;
+    }
+fprintf(out, ".section .text\n");
+}
+
 int main (int argc, char ** argv) {
     ParseStack stack = { 256, 0, malloc(sizeof(ParseStackEntry) * 256) };
     unique_strings = NULL;
@@ -262,6 +273,7 @@ int main (int argc, char ** argv) {
     print_expr(&stack, 0, EOF);
     printf("\n");
     
+    emit_strings(outfile);
     emit_start(outfile);
     emit_code(outfile, &stack, 0, EOF);
     emit_end(outfile);

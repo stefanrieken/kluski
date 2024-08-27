@@ -4,8 +4,8 @@ parse tree).
 
 ## Status, and Build
 The present compiler recognizes a limitied number of built-in demo commands.
-Alongside integers, it can handle blocks and sub-expressions. String support
-will follow soon.
+Alongside integers and strings, it can handle blocks and sub-expressions. No
+support for variables yet; this mainly requires organization at runtime.
 
 There currently are two backends: x86-64 Linux (gcc) and arm64 MacOS (clang). I
 expect e.g. the combination of arm64 and Linux to be slightly different again.

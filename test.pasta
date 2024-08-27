@@ -12,3 +12,9 @@ printnum (eval { * (+ 1 2) (+ 3 4) });
 
 # And this is all of it:
 eval { printnum (+ (* 3 4) (* 5 6)) };
+
+# This prints a pointer:
+printnum "42";
+
+# This prints text:
+print "Hello, world!";
