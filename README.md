@@ -1,5 +1,5 @@
-# ParSta
-ParSta compiles Pasta code by way of a parse stack (= the budget version of a
+# Parsta
+Parsta compiles Pasta code by way of a parse stack (= the budget version of a
 parse tree).
 
 ## Status, and Build
@@ -13,10 +13,10 @@ At any rate, the Makefile selects a file called emit_{os}_{arch}.c, and if your
 port is missing, you can try adding it.
 
 Otherwise, typing `make` should build the `parsta` executable, _and_ let it
-compile `test.parsta` into `test.s`, _and_ compile that into the `test`
+compile `test.pasta` into `test.s`, _and_ compile that into the `test`
 executable.
 
-Next, you can run the `test` executable, referring to the input file to know
+Next, you can run the `test` executable, referring to the input file to learn
 what it does:
 
         ./test

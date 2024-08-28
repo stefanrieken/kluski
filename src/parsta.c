@@ -12,9 +12,10 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "\%", "eval", "funcall", "printnum", "print"
+    "+", "*", "\%", "eval", "funcall", "printnum", "print", "define", "get", "set"
 };
 int num_primitives = (sizeof(primitive_names) / sizeof(char *));
+#define PRIM_GET 8
 
 ParseStackEntry * push (ParseStack * stack, ParseStackType type, int value) {
     if (stack->length >= stack->size) { printf ("Parse stack overflow\n"); exit(-1); }
@@ -49,11 +50,13 @@ char * unique_string(char * value) {
     return entry->str;
 }
 
+#define BUF_LEN 256
+
 void parse (FILE * in, FILE * out, ParseStack * stack) {
     int ch = fgetc(in);
 
     while (ch != EOF) {
-        while (ch == '#') { do { ch = fgetc(in); } while (ch != '\n'); ch = fgetc(in); } // comments
+        while (ch == '#') { do { ch = fgetc(in); } while (ch != '\n'); continue; } // comments
         if (ch == ' ' || ch == '\t' || ch == '\n') { ch = fgetc(in); continue; } // whitespace
         if (ch >= '0' && ch <= '9') { // number
             int numval = ch - '0';
@@ -73,8 +76,9 @@ void parse (FILE * in, FILE * out, ParseStack * stack) {
             char * buffer = NULL;
             int length = 0;
             do  {
-                if (length % 256 == 0) buffer = realloc(buffer, sizeof(char) * (length + 256));
+                if (length % BUF_LEN == 0) buffer = realloc(buffer, sizeof(char) * (length + BUF_LEN));
                 ch = fgetc(in);
+                // NOTE: for escape sequences we piggyback on the assembler
                 if (ch == '\"') ch = '\0'; // switch terminator values
                 buffer[length++] = ch;
             } while (ch != '\0');
@@ -82,11 +86,13 @@ void parse (FILE * in, FILE * out, ParseStack * stack) {
             ch = fgetc(in);
         } else {
             // Parse label; very comparable to above, but not quit the same.
-            char buffer[256];
+            char * buffer = NULL;
             int length = 0;
             do {
+                if (length % BUF_LEN == 0) buffer = realloc(buffer, sizeof(char) * (length + BUF_LEN));
                 buffer[length++] = ch; ch = fgetc(in);
             } while (ch != EOF && ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n' && ch != '(' && ch != ')' && ch != '{' && ch != '}' && ch != ';');
+                if (length % BUF_LEN == 0) buffer = realloc(buffer, sizeof(char) * (length + 1));
             buffer[length++] = '\0';
             //printf("Word of the day: *%s*\n", buffer);
             int idx = -1;
@@ -96,8 +102,15 @@ void parse (FILE * in, FILE * out, ParseStack * stack) {
                 }
             }
 
-            if (idx == -1) printf("Unrecognized command: %s\n", buffer);
-            else {
+            if (idx == -1) {
+                // Not recognized as builtin; so assume it's a var
+//                push_str(stack, PT_REF, unique_string(buffer));
+                push(stack, PT_OPN, '(');
+                push(stack, PT_FUN, PRIM_GET);
+                push_str(stack, PT_STR, unique_string(buffer));
+                push(stack, PT_CLS, ')');
+                
+            } else {
                 push(stack, PT_FUN, idx);
             }
         }
@@ -106,7 +119,6 @@ void parse (FILE * in, FILE * out, ParseStack * stack) {
 
 // Recurse printing to demo how the parse stack can be read non-flat,
 // so that it is possible to count current argument number
-
 int print_expr(ParseStack * stack, int from, char until) {
 //    int n_arg = 0;
 
@@ -124,6 +136,9 @@ int print_expr(ParseStack * stack, int from, char until) {
                 printf("%s ", primitive_names[entry->value.num]);
 //                printf("[%d] ", n_arg++);
                 break;
+//            case PT_REF:
+//                printf("%s ", entry->value.str);
+//                break;
             case PT_OPN:
                 printf("%c ", entry->value.num);
                 i = print_expr(stack, i+1, entry->value.num == '{' ? '}' : ')');
@@ -134,144 +149,14 @@ int print_expr(ParseStack * stack, int from, char until) {
                 else if (entry->value.num != ';') printf("Bracket mismatch\n");
 //                else if (entry->value.num == ';') n_arg = 0;
                 break;
-            default:
-                // Not all defined types have implementations yet; that's ok
-                break;
         }
     }
     return stack->length;
 }
 
-// Return position AFTER close
-int skip_until_close(ParseStack * stack, int from) {
-    int n_open = 0;
-    char closing_char = stack->entries[from].value.num == '{' ? '}' : ')';
-//printf("Saw '%c' so want '%c' (type is %d)\n", stack->entries[from].value.num, closing_char, stack->entries[from].type);
-    int i;
-    for (i=from; i<stack->length; i++) {
-        ParseStackEntry * entry = &(stack->entries[i]);
-        if (entry->type == PT_OPN) {
-            n_open++;
-        }
-        else if(entry->type == PT_CLS && entry->value.num != ';') {
-            n_open--;
-            if(n_open == 0) {
-                if (entry->value.num != closing_char) printf("Bracket mismatch2\n");
-                return i+1;
-            }
-        }
-    }
-    printf("Error: no closing bracket found\n");
-    return i;
-}
-
-// Return position AFTER close IF close is ';'
-// So at any rate, return position AFTER expression
-int emit_subexprs(FILE * out, ParseStack * stack, int from) {
-    int i = from;
-    int n_arg = 0;
-
-    // Optimization: don't temporaly save retval for last subexpr;
-    // instead immediately move it into target register
-    int to_save = -1;
-
-    for (; i<stack->length; i++) {
- 
-        ParseStackEntry * entry = &stack->entries[i];
-        if(entry->type == PT_CLS) {
-//            printf("close in subexprs: %d %c\n", i, entry->value.num);
-            if(entry->value.num == ';') { i += 1; }
-            break;
-        }
-
-        if (entry->type == PT_OPN) {
-            if (entry->value.num == '(') {
-               if (to_save > -1) { emit_save_retval(out); } // for previous subexpr
-               i = emit_code(out, stack, i+1, ')')-1; // correcting for upcoming i++
-               to_save = n_arg;
-            } else {
-                i = skip_until_close(stack, i)-1; // correcting for upcoming i++
-            }
-        }
-        n_arg++;
-    }
-    if (to_save > -1) emit_move_retval(out, to_save); // for previous subexpr
-
-    return i;
-}
-
-// After subexprs, emit this expr;
-// Return position AFTER close IF close is ';'
-// So at any rate, return position AFTER expression
-int emit_this_expr(FILE * out, ParseStack * stack, int from, int stashbase) {
-    int n_arg = 1;
-
-    // skip subexpression or block at function position
-    int i = from;
-    if (stack->entries[i].type == PT_OPN) {
-        i = skip_until_close(stack, i)-1;
-    }
-
-    i++; // go past first arg or end of subexpression
-
-    for (; i<stack->length; i++) {
-        ParseStackEntry * entry = &(stack->entries[i]);
-        if(entry->type == PT_CLS) {
-//            printf("close in this: %d %c\n", i, entry->value.num);
-            if (entry->value.num == ';') { i += 1; }
-            break;
-        }
-        i = emit_entry(out, stack, i, n_arg++, 0, &stashbase);
-    }
-    // And emit function
-    emit_entry(out, stack, from, 0, n_arg, &stashbase);
-
-    return i;
-}
-
-int stashptr;
-
-// Return position AFTER emitted code, including close
-int emit_code(FILE * out, ParseStack * stack, int from, char until) {
-    // We may be inside a sub-expression; so stashptr need not be zero
-    int saved_stashptr = stashptr;
-
-    while(from < stack->length) {
-        // Now emitting a single expression, with possible sub-expressions
-
-        int from2 = emit_subexprs(out, stack, from);
-        int from3 = emit_this_expr(out, stack, from, saved_stashptr);
-        // sanity check: do both functions agree on end of current expression / start of new?
-        if (from2 != from3) printf("Error emitting code: %d %d\n", from2, from3);
-        //else printf("Nice: %d %d\n", from2, from3);
-        from = from3;
-        // Reset for next expression if this is a sequence (a block; in wich case expect zero)
-        stashptr = saved_stashptr;
-
-        if (from < stack->length) {
-            ParseStackEntry * entry = &stack->entries[from];
-            if (entry->type == PT_CLS && entry->value.num == until) return from+1;
-            if (entry->type == PT_CLS && entry->value.num != until) { printf ("Erreur\n");};
-        }
-    }
-    return from;
-}
-
-void emit_strings(FILE * out) {
-//fprintf(out, ".section .rodata\n");
-    StringEntry * entry = unique_strings;
-    int i = 0;
-    while(entry != NULL) {
-        fprintf(out, "str%d:    .ascii \"%s\\0\"\n", i++, entry->str);
-        entry = entry->next;
-    }
-//fprintf(out, ".section .text\n");
-}
-
-int block_depth;
 
 int main (int argc, char ** argv) {
-    ParseStack stack = { 256, 0, malloc(sizeof(ParseStackEntry) * 256) };
+    ParseStack stack = { 1024, 0, malloc(sizeof(ParseStackEntry) * 1024) };
     unique_strings = NULL;
     block_depth = 0;
 

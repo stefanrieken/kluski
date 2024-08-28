@@ -14,7 +14,7 @@ eval { printnum (+ (* 3 4) (* 5 6)) };
 printnum "42";
 
 # This prints text:
-print "Hello, world!";
+print "Hello, world!\n";
 
 # Maths operations are in-lined where possible,
 # and first-class funtions where applicable
@@ -25,3 +25,13 @@ printnum (funcall % 13 4);
 
 # Nested blocks
 printnum (eval { eval { + 1 2 } });
+
+# Define
+define "x" 42;
+set "x" 33;
+printnum (get "x");
+printnum x;
+
+define "foo" { print "Hello from a function!\n"; };
+eval foo;
+foo (+ 1 2);

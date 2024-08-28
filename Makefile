@@ -1,6 +1,6 @@
 all: test
 
-parsta: src/parsta.c src/emit_$(shell uname -s)_$(shell uname -m).c
+parsta: src/parsta.c src/emit.c src/emit_$(shell uname -s)_$(shell uname -m).c
 	gcc -Wall -Wunused $^ -o $@
 
 test.s: parsta test.pasta

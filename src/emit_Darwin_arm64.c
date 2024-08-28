@@ -27,12 +27,12 @@ void emit_start(FILE * out) {
     fprintf(out, "    ret\n");
     fprintf(out, ".align 4\n");
     fprintf(out, "eval:\n");
-    fprintf(out, "    br %s               /* let callee return to caller    */\n", regnames[1]);
+    fprintf(out, "    br %s               /* let target return to caller    */\n", regnames[1]);
     fprintf(out, "_funcall:               /* (demo) function ptr support    */\n"); // 'funcal' _is_ a 'C primitive'
     for (int i=1; i<num_regnames; i++) {
         fprintf(out, "    mov %s, %s\n", regnames[i-1], regnames[i]);
     }
-    fprintf(out, "    br %s               /* let callee return to caller     */\n", regnames[0]);
+    fprintf(out, "    br %s               /* let target return to caller     */\n", regnames[0]);
     fprintf(out, ".globl _main\n");
     fprintf(out, ".align 4\n");
     fprintf(out, "_main:\n");
@@ -94,9 +94,8 @@ int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, 
                     break;
             }
             break;
-        case PT_REF:
-            printf("    TODO ref\n");
-            break;
+//        case PT_REF:
+//            break;
         case PT_OPN:
             if (entry->value.num == '(') {
                 if (*stashbase != stashptr) // Last subexpr was not stashed
