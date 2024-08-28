@@ -12,9 +12,9 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "printnum", "eval", "print"
+    "+", "*", "\%", "eval", "funcall", "printnum", "print"
 };
-# define num_primitives (sizeof(primitive_names) / sizeof(char *))
+int num_primitives = (sizeof(primitive_names) / sizeof(char *));
 
 ParseStackEntry * push (ParseStack * stack, ParseStackType type, int value) {
     if (stack->length >= stack->size) { printf ("Parse stack overflow\n"); exit(-1); }
@@ -123,7 +123,7 @@ int print_expr(ParseStack * stack, int from, char until) {
             case PT_FUN:
                 printf("%s ", primitive_names[entry->value.num]);
 //                printf("[%d] ", n_arg++);
-                break;  
+                break;
             case PT_OPN:
                 printf("%c ", entry->value.num);
                 i = print_expr(stack, i+1, entry->value.num == '{' ? '}' : ')');
@@ -168,9 +168,15 @@ int skip_until_close(ParseStack * stack, int from) {
 // Return position AFTER close IF close is ';'
 // So at any rate, return position AFTER expression
 int emit_subexprs(FILE * out, ParseStack * stack, int from) {
-    int n_arg = 0;
     int i = from;
+    int n_arg = 0;
+
+    // Optimization: don't temporaly save retval for last subexpr;
+    // instead immediately move it into target register
+    int to_save = -1;
+
     for (; i<stack->length; i++) {
+ 
         ParseStackEntry * entry = &stack->entries[i];
         if(entry->type == PT_CLS) {
 //            printf("close in subexprs: %d %c\n", i, entry->value.num);
@@ -180,15 +186,17 @@ int emit_subexprs(FILE * out, ParseStack * stack, int from) {
 
         if (entry->type == PT_OPN) {
             if (entry->value.num == '(') {
-                i = emit_code(out, stack, i+1, ')')-1; // correcting for upcoming i++
-                //printf("    stash result\n");
-                emit_save_retval(out);
+               if (to_save > -1) { emit_save_retval(out); } // for previous subexpr
+               i = emit_code(out, stack, i+1, ')')-1; // correcting for upcoming i++
+               to_save = n_arg;
             } else {
                 i = skip_until_close(stack, i)-1; // correcting for upcoming i++
             }
         }
         n_arg++;
     }
+    if (to_save > -1) emit_move_retval(out, to_save); // for previous subexpr
+
     return i;
 }
 
@@ -250,19 +258,22 @@ int emit_code(FILE * out, ParseStack * stack, int from, char until) {
 }
 
 void emit_strings(FILE * out) {
-fprintf(out, ".section .rodata\n");
+//fprintf(out, ".section .rodata\n");
     StringEntry * entry = unique_strings;
     int i = 0;
     while(entry != NULL) {
         fprintf(out, "str%d:    .ascii \"%s\\0\"\n", i++, entry->str);
         entry = entry->next;
     }
-fprintf(out, ".section .text\n");
+//fprintf(out, ".section .text\n");
 }
+
+int block_depth;
 
 int main (int argc, char ** argv) {
     ParseStack stack = { 256, 0, malloc(sizeof(ParseStackEntry) * 256) };
     unique_strings = NULL;
+    block_depth = 0;
 
     FILE * infile = stdin;
     FILE * outfile = stdout;

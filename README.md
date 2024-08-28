@@ -21,6 +21,6 @@ what it does:
 
         ./test
 
-You may notice that we generate both direct instructions (in case of '+') as
-well as calls to both primitive assembly functions ('*') and primitive C
-functions ('?' = print).
+You may notice that we generate both direct math instructions and primitives
+written both in assembly (a.o. for math operations as function pointers) and
+in C.

@@ -7,7 +7,7 @@ test.s: parsta test.pasta
 	./parsta test.pasta test.s
 
 test: test.s src/primitives.c
-	gcc test.s src/primitives.c -o test
+	gcc -Os test.s src/primitives.c -o test
 
 clean:
-	rm -f parsta test
+	rm -f parsta test test.s
