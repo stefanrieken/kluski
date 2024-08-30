@@ -23,19 +23,21 @@ typedef struct Variable {
     } value;
 } Variable;
 
-int num_variables;
+#define NUM_VARS 256
 Variable * variables;
-int top_variables;
+Variable * top_variables; // In assembly, this is easier than a counter
+Variable * end_variables;
 
 void init() {
-    num_variables = 256;
-    variables = malloc(sizeof(Variable) * num_variables);
-    top_variables = 0;
+    variables = malloc(sizeof(Variable) * NUM_VARS);
+    top_variables = variables;
+    end_variables = variables + (sizeof(Variable) * NUM_VARS);
+    //printf("sizeof Variable: %d\n", sizeof(Variable));
 }
 
 Variable * slot(char * name) {
-    for (int i=top_variables-1; i >=0; i--) {
-        Variable * var = &variables[i];
+    //printf("Find var %s in %p %p\n", name, top_variables, variables);
+    for (Variable * var = top_variables-1; var >= variables; var--) {
         if (var->name == name) { // exact same string pointer
             return var;
         }
@@ -46,8 +48,7 @@ Variable * slot(char * name) {
 }
 
 intptr_t define(char * name, intptr_t val) {
-    //printf("Defining %s as %d\n", name, val);
-    Variable * var = &variables[top_variables++];
+    Variable * var = top_variables++;
     var->name = name;
     var->value.num = val;
     return val;

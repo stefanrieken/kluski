@@ -12,10 +12,12 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "\%", "eval", "funcall", "printnum", "print", "define", "get", "set"
+    "+", "*", "\%", "eval", "funcall", "printnum", "print", "define", "get", "set", "args"
 };
 int num_primitives = (sizeof(primitive_names) / sizeof(char *));
+#define PRIM_DEFINE 7
 #define PRIM_GET 8
+#define PRIM_ARGS 10
 
 ParseStackEntry * push (ParseStack * stack, ParseStackType type, int value) {
     if (stack->length >= stack->size) { printf ("Parse stack overflow\n"); exit(-1); }

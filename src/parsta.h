@@ -42,6 +42,8 @@ extern int block_depth;
 void emit_strings(FILE * out);
 int emit_code(FILE * out, ParseStack * stack, int from, char until);
 int skip_until_close(ParseStack * stack, int from);
+int num_args(ParseStack * stack, int from);
+
 // Defined per platform
 void emit_start(FILE * out);
 int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, int * stashbase);

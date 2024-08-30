@@ -139,3 +139,17 @@ void emit_strings(FILE * out) {
 
 int block_depth;
 
+#define PRIM_ARGS 10
+// Utility for writing code for 'args'
+int num_args(ParseStack * stack, int from) {
+    int n_args=0;
+    if (stack->entries[from].type == PT_FUN && stack->entries[from].value.num == PRIM_ARGS) {
+        for (int i=from+1; i<stack->size;i++) {
+            if (stack->entries[i].type == PT_CLS) break;
+            n_args++;
+        }
+        return n_args;
+    }
+    // else
+    return -1; // no 'args' defined
+}

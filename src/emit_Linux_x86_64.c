@@ -5,9 +5,10 @@
 
 char * cmdnames[] = { "add", "mul", "remainder", "blr"};
 char * regnames[] = { "%rax", "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"} ; // NOTE: first reg in this list is for function pointer (= same as return value reg)
-char * retnames[] = { "%r10", "%r11", "%r12", "%r13", "%r14", "%r15" } ; // return value appears in %rax; then we copy them to one of these. NOTE: r12 and up should be callee saved!
+char * retnames[] = { "%r12", "%r13", "%r14", "%r15" } ; // return value appears in %rax; then we copy them to one of these. NOTE: r10 and r11 and up should be caller saved!
 
 int num_regnames = sizeof(regnames) / sizeof(char *);
+int num_retnames = sizeof(retnames) / sizeof(char *);
 
 void emit_start(FILE * out) {
 //    printf(".text\n");
@@ -31,6 +32,27 @@ void emit_start(FILE * out) {
         fprintf(out, "    mov %s, %s\n", regnames[i], regnames[i-1]);
     }
     fprintf(out, "    jmp *%s           /* let target return to caller    */\n", regnames[0]);
+//    fprintf(out, "define:\n"); // should be equivalent to the one in primitives.c, so may as well keep portable
+//    fprintf(out, "    mov top_variables(%%rip), %%rax\n");
+//    fprintf(out, "    mov %s, 0(%%rax) /* store name                     */\n", regnames[1]);
+//    fprintf(out, "    mov %s, 8(%%rax)  /* store value                    */\n", regnames[2]);
+//    fprintf(out, "    add $16, %%rax        /* increment top_variables        */\n");
+//    fprintf(out, "    mov %%rax, top_variables(%%rip) /* and save */\n");
+//    fprintf(out, "    ret\n");
+    fprintf(out, "args:\n");
+    fprintf(out, "    mov top_variables(%%rip), %%rax\n");
+    for (int i=1;i<=num_retnames; i++) {
+        fprintf(out, "    cmp $0, %s        /* have arg %d?                    */ \n", regnames[i], i);
+        fprintf(out, "    jz %df               /* else done                      */\n", i == 1 ? 1 : 0);
+        fprintf(out, "    mov %s,  0(%%rax)  /* store name %d                  */\n", regnames[i], i);
+        fprintf(out, "    mov %d(%%rsp), %s   /* find value %d on stack pointer */\n", 8*i, regnames[i], i);
+        fprintf(out, "    mov %s, 8(%%rax)   /* store value %d */\n", regnames[i], i);
+        fprintf(out, "    add $16, %%rax       /* top_variables++                */\n");
+    }
+    fprintf(out, "0:\n");
+    fprintf(out, "    mov %%rax, top_variables(%%rip) /* and save */\n");
+    fprintf(out, "1:\n");
+    fprintf(out, "    ret\n");
     fprintf(out, ".globl main\n");
     fprintf(out, "main:\n");
     fprintf(out, "    lea init(%%rip), %%rax\n");
@@ -75,7 +97,7 @@ int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, 
                 default: // "funcall", "printnum", "print", ...
                     fprintf(out, "    lea %s(%%rip), %s\n", primitive_names[entry->value.num], regnames[n_arg]); // That's for function pointers
                     if (n_arg == 0) { // that's the function position; in any other position, function == common argument
-                        fprintf(out, "    call *%s\n", regnames[0]);
+                        fprintf(out, "    call *%s\n", regnames[n_arg]);
                     }
                     break;
             }
@@ -97,13 +119,33 @@ int emit_entry(FILE * out, ParseStack * stack, int from, int n_arg, int n_args, 
                 return skip_until_close(stack, from)-1;
             } else {
                 block_depth++;
- //               printf("    store and jump over block\n");
+
                 fprintf(out, "    lea 0f(%%rip), %s /* load start of block as arg      */\n", regnames[n_arg]);
                 fprintf(out, "    jmp %df             /* jump over the block             */\n", block_depth);
                 fprintf(out, "0:                     /* start of block                  */\n");
+                fprintf(out, "    mov top_variables(%%rip), %%rax\n");
+                fprintf(out, "    push %%rax\n");
+
+                int n_args2 = num_args(stack, from+1); // = -1 if no 'args'
+                if (n_args2 != -1) {
+                    for (int i=n_args2-1;i>=0;i--) {
+                        fprintf(out, "    push %s     /* store arg %d for 'args'       */\n", regnames[i+1], i+1);
+                    }
+                    if (n_args2 < num_regnames-1) {
+                        fprintf(out, "    mov $0, %s     /* mark end of varargs to 'args' */\n", regnames[n_args2+1]);
+                    }
+                }
+
                 from = emit_code(out, stack, from+1, '}')-1;
+
+                if (n_args2 > 0) {
+                    fprintf(out, "    add $%d, %%rsp     /* remove args from stack */\n", n_args2*8);
+                }
+                fprintf(out, "    pop %s\n", regnames[1]);
+                fprintf(out, "    mov %s, top_variables(%%rip)\n", regnames[1]);
                 fprintf(out, "    ret                 /* return from block              */\n");
                 fprintf(out, "%d:\n", block_depth);
+
                 block_depth--;
                 return from;
             }
