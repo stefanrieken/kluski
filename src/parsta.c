@@ -12,7 +12,7 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "\%", "eval", "funcall", "printnum", "print", "define", "get", "set", "args"
+    "+", "*", "\%", "if", "funcall", "printnum", "print", "define", "get", "set", "args"
 };
 int num_primitives = (sizeof(primitive_names) / sizeof(char *));
 #define PRIM_DEFINE 7

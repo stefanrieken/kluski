@@ -25,8 +25,12 @@ void emit_start(FILE * out) {
     fprintf(out, "    div %s            /* rax = result; rdx = rest       */\n", regnames[2]);
     fprintf(out, "    mov %%rdx, %%rax      /* return remainder               */\n");
     fprintf(out, "    ret\n");
-    fprintf(out, "eval:\n");
-    fprintf(out, "    jmp *%s           /* let target return to caller    */\n", regnames[1]);
+    fprintf(out, "if:\n");
+    fprintf(out, "    cmp $0, %s\n", regnames[1]);
+    fprintf(out, "    jz 0f\n");
+    fprintf(out, "    jmp *%s           /* let target return to caller    */\n", regnames[2]);
+    fprintf(out, "0:\n");
+    fprintf(out, "    ret\n");
     fprintf(out, "funcall:                /* (demo) function ptr support    */\n");
     for (int i=1; i<num_regnames; i++) {
         fprintf(out, "    mov %s, %s\n", regnames[i], regnames[i-1]);
@@ -55,8 +59,7 @@ void emit_start(FILE * out) {
     fprintf(out, "    ret\n");
     fprintf(out, ".globl main\n");
     fprintf(out, "main:\n");
-    fprintf(out, "    lea init(%%rip), %%rax\n");
-    fprintf(out, "    call *%%rax\n");
+    fprintf(out, "    call init\n");
 }
 
 int unique_string_idx(ParseStackEntry * entry) {
