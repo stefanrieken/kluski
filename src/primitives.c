@@ -9,8 +9,13 @@ int printnum(int a) {
     return a;
 }
 
-int print(char * a) {
-    printf("%s", a);
+int print(char * a, char * b, char * c, char * d, char * e, char * f) {
+    printf("%s", a); if (b == NULL) return 0;
+    printf("%s", b); if (c == NULL) return 0;
+    printf("%s", c); if (d == NULL) return 0;
+    printf("%s", d); if (e == NULL) return 0;
+    printf("%s", e); if (f == NULL) return 0;
+    printf("%s", f);
     return 0;
 }
 
@@ -32,13 +37,14 @@ void init() {
     variables = malloc(sizeof(Variable) * NUM_VARS);
     top_variables = variables;
     end_variables = variables + (sizeof(Variable) * NUM_VARS);
-    //printf("sizeof Variable: %d\n", sizeof(Variable));
+    //printf("sizeof Variable: %ld\n", sizeof(Variable));
 }
 
 Variable * slot(char * name) {
-    //printf("Find var %s in %p %p\n", name, top_variables, variables);
+    // printf("Find var %s in %p %p\n", name, top_variables, variables);
     for (Variable * var = top_variables-1; var >= variables; var--) {
         if (var->name == name) { // exact same string pointer
+            // printf("Found it!\n");
             return var;
         }
     }
@@ -48,6 +54,7 @@ Variable * slot(char * name) {
 }
 
 intptr_t define(char * name, intptr_t val) {
+    // printf("Defining %s as %ld\n", name, val);
     Variable * var = top_variables++;
     var->name = name;
     var->value.num = val;

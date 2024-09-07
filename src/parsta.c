@@ -12,12 +12,12 @@
  */
 
 char * primitive_names[] = {
-    "+", "*", "\%", "if", "funcall", "printnum", "print", "define", "get", "set", "args"
+    "+", "-", "*", "/", "\%", "=", "!", "if", "funcall", "printnum", "print", "define", "get", "set", "args"
 };
 int num_primitives = (sizeof(primitive_names) / sizeof(char *));
-#define PRIM_DEFINE 7
-#define PRIM_GET 8
-#define PRIM_ARGS 10
+#define PRIM_DEFINE 11
+#define PRIM_GET 12
+#define PRIM_ARGS 14
 
 ParseStackEntry * push (ParseStack * stack, ParseStackType type, int value) {
     if (stack->length >= stack->size) { printf ("Parse stack overflow\n"); exit(-1); }
@@ -61,11 +61,25 @@ void parse (FILE * in, FILE * out, ParseStack * stack) {
         while (ch == '#') { do { ch = fgetc(in); } while (ch != '\n'); continue; } // comments
         if (ch == ' ' || ch == '\t' || ch == '\n') { ch = fgetc(in); continue; } // whitespace
         if (ch >= '0' && ch <= '9') { // number
+            int base = 10;
             int numval = ch - '0';
             ch = fgetc(in);
-            while (ch>= '0' && ch <= '9') {
-                numval = numval * 10 + (ch - '0');
+            if (numval == 0 && ch == 'b') { base = 2; ch = fgetc(in); }
+            else if (numval == 0 && ch == 'x') { base = 16; ch = fgetc(in); }
+
+            int normalized;
+            if (ch >= 'a' && ch < 'a' + (base-10)) normalized = (ch - 'a') + 10;
+            else if (ch >= 'A' && ch < 'A' + (base-10)) normalized = (ch - 'A') + 10;
+            else if (ch >= '0' && ch <= '9' && ch < '0'+base) normalized = ch - '0';
+            else normalized = 0xFF; // No numeric char anymore
+
+            while (normalized >= 0 && normalized < base) {
+                numval = numval * base + normalized;
                 ch = fgetc(in);
+                if (ch >= 'a' && ch < 'a' + (base-10)) normalized = (ch - 'a') + 10;
+                else if (ch >= 'A' && ch < 'A' + (base-10)) normalized = (ch - 'A') + 10;
+                else if (ch >= '0' && ch <= '9' && ch < '0'+base) normalized = ch - '0';
+                else normalized = 0xFF; // No numeric char anymore
             }
             push(stack, PT_INT, numval);
         } else if (ch == '{' || ch == '(') {
