@@ -139,7 +139,7 @@ void emit_strings(FILE * out) {
 
 int block_depth;
 
-#define PRIM_ARGS 14
+#define PRIM_ARGS 26
 // Utility for writing code for 'args'
 int num_args(ParseStack * stack, int from) {
     int n_args=0;

@@ -74,3 +74,29 @@ intptr_t set(char * name, intptr_t val) {
     var->value.num = val;
     return val;
 }
+
+char buffer[25];
+
+char * dollar(intptr_t val, intptr_t base, intptr_t positions) {
+    if (base == 0) { base = 10; positions = 0; } // if varargs stopped at base, then space may have garbage
+    if (positions == 0) {
+        // Decide positions based on val
+        uint16_t val2 = val;
+        while (val2 != 0) { val2 = val2 / base; positions++; }
+        if (positions == 0) positions = 1;
+    }
+
+    int divider = 1;
+    while (positions > 1) { divider *= base; positions--; }
+
+    int i = 0;
+    while (divider != 0) {
+        uint8_t digit = (val / divider) % base;
+        uint8_t start = digit < 10 ? '0' : 'a' - 10;
+        buffer[i++] = start + ((val / divider) % base);
+        divider /= base;
+    }
+
+    buffer[i++] = '\0';
+    return buffer;
+}
